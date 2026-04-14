@@ -12,7 +12,26 @@ export const rmaRouter = Router();
 
 rmaRouter.use(authMiddleware);
 
-// POST /api/rma/:orderId  — create RMA from eligible order
+// POST /api/rma/orders/merge
+// Register before /orders/:orderId so Express does not treat "merge" as :orderId.
+rmaRouter.post(
+  '/orders/merge',
+  requirePermission('orders:merge'),
+  validate(mergeOrdersSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { orderIds, note } = req.body as { orderIds: string[]; note?: string };
+      const merged = await orderMergeService.merge({
+        orderIds,
+        userId: req.session!.userId,
+        note,
+      });
+      res.json({ data: merged });
+    } catch (err) { next(err); }
+  },
+);
+
+// POST /api/rma/orders/:orderId - create RMA from eligible order
 rmaRouter.post(
   '/orders/:orderId',
   requirePermission('rma:create'),
@@ -32,7 +51,7 @@ rmaRouter.post(
   },
 );
 
-// POST /api/rma/:rmaId/approve — admin only
+// POST /api/rma/:rmaId/approve - admin only
 rmaRouter.post(
   '/:rmaId/approve',
   requirePermission('rma:approve'),
@@ -59,24 +78,6 @@ rmaRouter.post(
         note,
       });
       res.json({ data: result });
-    } catch (err) { next(err); }
-  },
-);
-
-// POST /api/rma/orders/merge
-rmaRouter.post(
-  '/orders/merge',
-  requirePermission('orders:merge'),
-  validate(mergeOrdersSchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { orderIds, note } = req.body as { orderIds: string[]; note?: string };
-      const merged = await orderMergeService.merge({
-        orderIds,
-        userId: req.session!.userId,
-        note,
-      });
-      res.json({ data: merged });
     } catch (err) { next(err); }
   },
 );

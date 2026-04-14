@@ -64,6 +64,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   department_admin: [
     'catalog:read', 'catalog:manage_catalog',
     'vendors:read', 'vendors:create', 'vendors:update',
+    'cart:create', 'cart:update', 'cart:delete',
     'orders:read', 'orders:admin',
     'orders:split', 'orders:merge',
     'order_notes:read', 'order_notes:create',

@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getDb } from '../../persistence/mongoClient.js';
-import type { Order, OrderItem, OrderNote, OrderTag } from '@nexusorder/shared-types';
+import type { Order, OrderItem, OrderNote, OrderTag, User } from '@nexusorder/shared-types';
 import { orderRepository } from '../orders/orderRepository.js';
 import { assertMergeEligible } from '../orders/orderStateMachine.js';
 import { validateMergeInvariant, computeChildTaxLines } from './splitMergeInvariants.js';
@@ -20,7 +20,10 @@ export const orderMergeService = {
     for (const order of orders) {
       assertMergeEligible(order.state);
     }
-    validateMergeInvariant(orders);
+    const actor = await getDb().collection<User>('users').findOne(
+      { _id: params.userId } as { _id: string },
+    );
+    validateMergeInvariant(orders, { ignoreUserMismatch: actor?.role === 'department_admin' });
 
     const correlationId = randomUUID();
     await writeCheckpoint({

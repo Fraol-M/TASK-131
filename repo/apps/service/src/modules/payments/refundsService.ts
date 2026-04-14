@@ -17,7 +17,12 @@ type RefundInput = {
 
 export const refundsService = {
   async createRefund(input: RefundInput, initiatedBy: string): Promise<Refund> {
-    const intent = await getDb().collection<PaymentIntent>('payment_intents').findOne({ _id: input.paymentIntentId } as { _id: string });
+    const intent = await getDb().collection<PaymentIntent>('payment_intents').findOne({
+      $or: [
+        { _id: input.paymentIntentId },
+        { paymentIntentId: input.paymentIntentId },
+      ],
+    } as { $or: Array<{ _id: string } | { paymentIntentId: string }> });
     if (!intent) throw new NotFoundError('PaymentIntent');
 
     // Validate that the payment intent belongs to the specified order

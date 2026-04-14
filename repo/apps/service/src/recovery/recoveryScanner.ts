@@ -245,7 +245,7 @@ async function recoverMerge(checkpoint: CheckpointLog): Promise<void> {
       .collection<Order>('orders')
       .findOne({ _id: sourceId } as { _id: string });
 
-    if (finalOrder?.state !== preMergeState) {
+    if (finalOrder && finalOrder.state !== preMergeState) {
       unrecoverable.push(sourceId);
       log.warn(
         { operationId, sourceId, actualState: finalOrder?.state, expectedState: preMergeState },

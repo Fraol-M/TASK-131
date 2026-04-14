@@ -49,7 +49,7 @@ export class ConflictError extends AppError {
 
 export class BusinessRuleError extends AppError {
   constructor(code: string, message: string) {
-    super(code, message, 422);
+    super(code, `${code}: ${message}`, 422);
   }
 }
 

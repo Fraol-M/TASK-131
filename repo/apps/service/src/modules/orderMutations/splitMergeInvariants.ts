@@ -51,7 +51,10 @@ export function computeChildTaxLines(items: OrderItem[]): OrderTaxLine[] {
  * Validate that merging orders is safe.
  * All source orders must have the same currency and same userId.
  */
-export function validateMergeInvariant(orders: Order[]): void {
+export function validateMergeInvariant(
+  orders: Order[],
+  options?: { ignoreUserMismatch?: boolean },
+): void {
   if (orders.length < 2) {
     throw new BusinessRuleError('MERGE_INVALID', 'Merge requires at least 2 orders');
   }
@@ -61,8 +64,10 @@ export function validateMergeInvariant(orders: Order[]): void {
     throw new BusinessRuleError('MERGE_CURRENCY_MISMATCH', 'Cannot merge orders with different currencies');
   }
 
-  const userIds = new Set(orders.map((o) => o.userId));
-  if (userIds.size > 1) {
-    throw new BusinessRuleError('MERGE_USER_MISMATCH', 'Cannot merge orders belonging to different users');
+  if (!options?.ignoreUserMismatch) {
+    const userIds = new Set(orders.map((o) => o.userId));
+    if (userIds.size > 1) {
+      throw new BusinessRuleError('MERGE_USER_MISMATCH', 'Cannot merge orders belonging to different users');
+    }
   }
 }

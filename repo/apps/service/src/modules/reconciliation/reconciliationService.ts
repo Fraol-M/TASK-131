@@ -4,7 +4,7 @@ import type { ReconciliationImport, ReconciliationRow, PaymentIntent } from '@ne
 import { parseCsvBuffer, buildRowSignaturePayload } from './csvParser.js';
 import { verifyRowSignature } from '../../crypto/signatureVerifier.js';
 import { emitAuditEvent } from '../../audit/auditLog.js';
-import { BusinessRuleError, ForbiddenError } from '../../middleware/errorHandler.js';
+import { AppError, BusinessRuleError, ForbiddenError } from '../../middleware/errorHandler.js';
 import { createModuleLogger } from '@nexusorder/shared-logging';
 import { orderRepository } from '../orders/orderRepository.js';
 import { guardTransition } from '../orders/orderStateMachine.js';
@@ -41,7 +41,7 @@ export const reconciliationService = {
     await getDb().collection<ReconciliationImport>('payment_reconciliation_imports').insertOne(importRecord);
 
     // Pre-flight signature validation: verify ALL rows before persisting anything.
-    // A single invalid signature rejects the entire import — partial acceptance would
+    // A single invalid signature rejects the entire import ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â partial acceptance would
     // allow tampered rows to slip through as "exception" rows.
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]!;
@@ -53,7 +53,7 @@ export const reconciliationService = {
         log.warn({ err, rowIndex: i }, 'Signature verification error');
       }
       if (!signatureValid) {
-        // Abort the entire import — mark the import record as failed and throw
+        // Abort the entire import ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mark the import record as failed and throw
         await getDb().collection<ReconciliationImport>('payment_reconciliation_imports').updateOne(
           { _id: importId } as { _id: string },
           { $set: { status: 'failed', signatureValid: false } },
@@ -65,9 +65,10 @@ export const reconciliationService = {
           targetId: importId,
           meta: { filename, reason: 'invalid_signature', rowIndex: i },
         });
-        throw new BusinessRuleError(
+        throw new AppError(
           'INVALID_SIGNATURE',
-          `Row ${i} has an invalid merchant signature — import rejected`,
+          `Row ${i} has an invalid merchant signature - import rejected`,
+          400,
         );
       }
     }
@@ -119,7 +120,7 @@ export const reconciliationService = {
 
           // Advance the corresponding order to 'paid' if it is still in 'approved' state.
           // If manual payment confirmation already advanced it, the state will be 'paid' or
-          // later — skip the transition to avoid a state-machine violation.
+          // later ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â skip the transition to avoid a state-machine violation.
           try {
             const order = await orderRepository.findById(intent.orderId);
             if (order.state === 'approved') {
@@ -151,7 +152,7 @@ export const reconciliationService = {
       try {
         await getDb().collection<ReconciliationRow>('payment_reconciliation_rows').insertOne(rowDoc);
       } catch (insertErr: unknown) {
-        // Handle unique-key conflict (concurrent import race) — treat as duplicate
+        // Handle unique-key conflict (concurrent import race) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â treat as duplicate
         if ((insertErr as { code?: number }).code === 11000) {
           if (!isDuplicate) {
             duplicateCount++;

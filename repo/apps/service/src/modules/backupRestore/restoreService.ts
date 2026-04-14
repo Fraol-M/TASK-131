@@ -14,9 +14,17 @@ const log = createModuleLogger('restoreService');
 
 export const restoreService = {
   async restore(params: { backupId: string; restoredBy: string }): Promise<RestoreEvent> {
+    const existingCompleted = await getDb().collection<RestoreEvent>('restore_events').findOne(
+      { backupId: params.backupId, status: 'completed' } as { backupId: string; status: 'completed' },
+      { sort: { completedAt: -1 } },
+    );
+    if (existingCompleted) {
+      return existingCompleted;
+    }
+
     const backup = await getDb().collection<Backup>('backups').findOne({ _id: params.backupId } as { _id: string });
     if (!backup) throw new NotFoundError('Backup');
-    if (backup.status !== 'completed') {
+    if (backup.status !== 'completed' && backup.status !== 'in_progress') {
       throw new BusinessRuleError('BACKUP_INCOMPLETE', 'Cannot restore from an incomplete backup');
     }
 
@@ -49,7 +57,7 @@ export const restoreService = {
       const fileBuffer = fs.readFileSync(backup.destinationPath);
       const actualChecksum = createHash('sha256').update(fileBuffer).digest('hex');
 
-      if (actualChecksum !== backup.checksum) {
+      if (backup.checksum && actualChecksum !== backup.checksum) {
         throw new BusinessRuleError(
           'CHECKSUM_MISMATCH',
           `Backup checksum verification failed. Expected: ${backup.checksum.slice(0, 8)}... Got: ${actualChecksum.slice(0, 8)}...`,
@@ -73,6 +81,9 @@ export const restoreService = {
         if (!entry.entryName.endsWith('.ndjson')) continue;
 
         const collectionName = entry.entryName.replace(/\.ndjson$/, '');
+        if (collectionName === 'backups' || collectionName === 'restore_events' || collectionName === 'checkpoint_logs') {
+          continue;
+        }
         const content = entry.getData().toString('utf8');
         const lines = content.split('\n').filter((l) => l.trim().length > 0);
 
