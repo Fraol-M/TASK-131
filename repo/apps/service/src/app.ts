@@ -78,6 +78,7 @@ export function createApp(): express.Application {
   app.use('/api/payments/intents', paymentIntentsRouter);
   app.use('/api/payments/reconciliation', reconciliationRouter);
   app.use('/api/refunds', refundsRouter);
+  app.use('/api/payments/refunds', refundsRouter);
   app.use('/api/rma', rmaRouter);
   app.use('/api/reason-codes', reasonCodeRouter);
   app.use('/api/rules', rulesRouter);
