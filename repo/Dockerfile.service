@@ -1,0 +1,70 @@
+# ─── Stage 1: Build ───────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+RUN npm install -g pnpm@9
+
+# Generate self-signed TLS cert for localhost IPC (dev/test; replace with CA-signed cert in prod)
+RUN apk add --no-cache openssl && \
+    mkdir -p /certs && \
+    openssl req -x509 -newkey rsa:4096 \
+      -keyout /certs/tls.key -out /certs/tls.crt \
+      -days 3650 -nodes \
+      -subj "/CN=localhost" \
+      -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,DNS:service-test"
+
+WORKDIR /app
+
+# Copy workspace manifests first for layer caching
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY tsconfig.base.json ./
+
+# Copy shared packages
+COPY packages/ ./packages/
+
+# Copy service app
+COPY apps/service/ ./apps/service/
+
+# Install all dependencies (workspace-aware)
+RUN pnpm install --frozen-lockfile
+
+# Build shared packages first
+RUN pnpm --filter @nexusorder/shared-types build
+RUN pnpm --filter @nexusorder/shared-validation build
+RUN pnpm --filter @nexusorder/shared-rbac build
+RUN pnpm --filter @nexusorder/shared-logging build
+
+# Build service
+RUN pnpm --filter @nexusorder/service build
+
+# ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM node:20-alpine AS runtime
+
+RUN npm install -g pnpm@9
+
+WORKDIR /app
+
+# Copy workspace config for pnpm module resolution
+COPY package.json pnpm-workspace.yaml ./
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps/service/dist ./apps/service/dist
+COPY --from=builder /app/apps/service/package.json ./apps/service/package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/service/node_modules ./apps/service/node_modules
+
+# Copy TLS certs from builder and set permissions before switching user
+COPY --from=builder /certs /app/certs
+
+# Non-root user for security
+RUN addgroup -S nexus && adduser -S nexus -G nexus && \
+    chown -R nexus:nexus /app/certs && chmod 600 /app/certs/tls.key
+USER nexus
+
+ENV TLS_CERT_PATH=/app/certs/tls.crt
+ENV TLS_KEY_PATH=/app/certs/tls.key
+
+EXPOSE 4433
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+  CMD wget -qO- --no-check-certificate https://127.0.0.1:4433/api/system/health || exit 1
+
+CMD ["node", "apps/service/dist/server.js"]

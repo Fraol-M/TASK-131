@@ -1,0 +1,40 @@
+FROM node:20-alpine
+
+RUN npm install -g pnpm@9
+
+# Install deps for Playwright/headless Chromium (desktop UI tests)
+RUN apk add --no-cache \
+  chromium \
+  nss \
+  freetype \
+  harfbuzz \
+  ca-certificates \
+  ttf-freefont \
+  bash \
+  curl
+
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV CHROMIUM_PATH=/usr/bin/chromium-browser
+
+WORKDIR /app
+
+# Copy entire monorepo
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY tsconfig.base.json ./
+COPY packages/ ./packages/
+COPY apps/service/ ./apps/service/
+COPY database/ ./database/
+COPY vitest.workspace.ts ./
+
+RUN pnpm install --frozen-lockfile
+
+# Build shared packages
+RUN pnpm --filter @nexusorder/shared-types build
+RUN pnpm --filter @nexusorder/shared-validation build
+RUN pnpm --filter @nexusorder/shared-rbac build
+RUN pnpm --filter @nexusorder/shared-logging build
+
+# Build service (needed for integration tests)
+RUN pnpm --filter @nexusorder/service build
+
+CMD ["pnpm", "-r", "test"]

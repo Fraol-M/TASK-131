@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: nexusorder-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: nexusorder
+    volumes:
+      - mongo-data:/data/db
+      - ./database/seed:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: nexusorder-service
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "4433:4433"
+    environment:
+      NODE_ENV: development
+      SERVICE_PORT: "4433"
+      SERVICE_HOST: "0.0.0.0"
+      MONGODB_URI: mongodb://mongo:27017/nexusorder
+      MONGODB_DB_NAME: nexusorder
+      SESSION_SECRET: dev_session_secret_replace_in_prod_64chars__padding
+      FIELD_ENCRYPTION_KEY: dev_encryption_key_replace_in_prod_64chars_padding
+      BACKUP_ENCRYPTION_KEY: dev_backup_encryption_key_replace_in_prod_64chars_p
+      INTERNAL_API_KEY: dev_internal_api_key_replace_in_prod_min32chars__
+      # TLS_CERT_PATH and TLS_KEY_PATH default to /app/certs/tls.{crt,key} (set in Dockerfile)
+    volumes:
+      - ./apps/service/src:/app/apps/service/src:ro
+      - backup-data:/app/backups
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: nexusorder-mongo-express
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: "27017"
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: nexusorder_dev
+
+volumes:
+  mongo-data:
+  backup-data:

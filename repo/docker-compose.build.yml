@@ -1,0 +1,12 @@
+version: "3.9"
+
+# CI build: compile all packages, verify no TypeScript errors
+services:
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-runner
+    container_name: nexusorder-build
+    command: ["pnpm", "-r", "build"]
+    environment:
+      NODE_ENV: production

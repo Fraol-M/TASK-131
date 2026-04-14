@@ -1,0 +1,63 @@
+appId: com.nexusorder.desk
+productName: NexusOrder Desk
+copyright: NexusOrder Desk Contributors
+
+# ─── Windows MSI ──────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: msi
+      arch: x64
+  icon: assets/icons/icon.ico
+  # Code signing — set CSC_LINK and CSC_KEY_PASSWORD env vars in CI
+  # certificateSubjectName: "Your Organization Name"
+  signingHashAlgorithms:
+    - sha256
+
+msi:
+  oneClick: false
+  perMachine: true
+  runAfterFinish: false
+
+# ─── Build config ─────────────────────────────────────────────────────────────
+files:
+  - dist/**/*
+  - node_modules/**/*
+  - package.json
+
+directories:
+  output: dist-installer
+  buildResources: assets
+
+# ─── App metadata ─────────────────────────────────────────────────────────────
+extraMetadata:
+  version: "1.0.0"
+
+# ─── Extra resources bundled into the installer ───────────────────────────────
+# openssl.exe is required by productionConfig.ts on first launch to generate the
+# self-signed localhost TLS certificate.  Drop a pre-built Windows x64 OpenSSL
+# binary into vendor/openssl/ before running the MSI build.
+# Download source: https://slproweb.com/products/Win32OpenSSL.html (Win64 OpenSSL Lite)
+extraResources:
+  # OpenSSL — required by productionConfig.ts on first launch to generate TLS cert.
+  # Download source: https://slproweb.com/products/Win32OpenSSL.html (Win64 OpenSSL Lite)
+  - from: "vendor/openssl/openssl.exe"
+    to: "openssl.exe"
+  - from: "vendor/openssl/libssl-3-x64.dll"
+    to: "libssl-3-x64.dll"
+  - from: "vendor/openssl/libcrypto-3-x64.dll"
+    to: "libcrypto-3-x64.dll"
+  # MongoDB Community Server — spawned by mongoManager.ts in packaged mode.
+  # Download source: https://www.mongodb.com/try/download/community (Windows x64 zip)
+  # Extract mongod.exe and all companion DLLs into vendor/mongodb/ before the MSI build.
+  # The glob below copies every .exe and .dll so companion libraries (snappy, zstd, zlib,
+  # libssl, libcrypto) are included alongside mongod.exe without listing each by name.
+  - from: "vendor/mongodb"
+    to: "."
+    filter:
+      - "*.exe"
+      - "*.dll"
+
+# ─── ASAR packaging ───────────────────────────────────────────────────────────
+asar: true
+asarUnpack:
+  - "node_modules/@nexusorder/service/dist/**/*"

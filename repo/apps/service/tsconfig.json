@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "paths": {
+      "@nexusorder/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@nexusorder/shared-validation": ["../../packages/shared-validation/src/index.ts"],
+      "@nexusorder/shared-rbac": ["../../packages/shared-rbac/src/index.ts"],
+      "@nexusorder/shared-logging": ["../../packages/shared-logging/src/index.ts"]
+    }
+  },
+  "include": ["src", "tests"]
+}

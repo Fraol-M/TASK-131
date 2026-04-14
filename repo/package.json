@@ -1,0 +1,38 @@
+{
+  "name": "nexusorder-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NexusOrder Desk — offline desktop commerce and fulfillment platform",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter @nexusorder/service dev\" \"pnpm --filter @nexusorder/desktop dev\"",
+    "dev:service": "pnpm --filter @nexusorder/service dev",
+    "dev:desktop": "pnpm --filter @nexusorder/desktop dev",
+    "build": "pnpm -r --filter @nexusorder/shared-types build && pnpm -r --filter @nexusorder/shared-validation build && pnpm -r --filter @nexusorder/shared-rbac build && pnpm -r --filter @nexusorder/shared-logging build && pnpm -r --filter @nexusorder/service build && pnpm -r --filter @nexusorder/desktop build",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r --filter @nexusorder/service test:unit",
+    "test:integration": "pnpm -r --filter @nexusorder/service test:integration",
+    "test:docker": "bash run_tests.sh",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+    "package": "pnpm --filter @nexusorder/desktop package",
+    "db:indexes": "pnpm --filter @nexusorder/service db:indexes",
+    "db:seed": "pnpm --filter @nexusorder/service db:seed"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

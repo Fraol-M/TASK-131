@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  mongo-test:
+    image: mongo:7
+    container_name: nexusorder-mongo-test
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: nexusorder_test
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  service-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+    container_name: nexusorder-service-test
+    depends_on:
+      mongo-test:
+        condition: service_healthy
+    ports:
+      - "4434:4433"
+    environment:
+      NODE_ENV: test
+      SERVICE_PORT: "4433"
+      SERVICE_HOST: "0.0.0.0"
+      MONGODB_URI: mongodb://mongo-test:27017/nexusorder_test
+      MONGODB_DB_NAME: nexusorder_test
+      SESSION_SECRET: test_session_secret_64chars_padding_abcdefghijklmno
+      FIELD_ENCRYPTION_KEY: test_encryption_key_64chars_padding_abcdefghijklmno
+      BACKUP_ENCRYPTION_KEY: test_backup_encryption_key_64chars_padding_abcdefgh
+      INTERNAL_API_KEY: test_internal_api_key_min32chars_abcdefghijklmno
+      # TLS_CERT_PATH and TLS_KEY_PATH default to /app/certs/tls.{crt,key} (set in Dockerfile)
+      AUTH_MAX_FAILED_ATTEMPTS: "5"
+      AUTH_LOCKOUT_MINUTES: "15"
+      CHECKOUT_MAX_ATTEMPTS: "10"
+      CHECKOUT_WINDOW_MINUTES: "10"
+      ORDER_AUTO_CANCEL_MINUTES: "30"
+      ORDER_AUTO_CLOSE_DAYS: "14"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "--no-check-certificate", "https://127.0.0.1:4433/api/system/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-runner
+    container_name: nexusorder-test-runner
+    depends_on:
+      mongo-test:
+        condition: service_healthy
+      service-test:
+        condition: service_healthy
+    environment:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://mongo-test:27017/nexusorder_test
+      MONGODB_DB_NAME: nexusorder_test
+      SERVICE_BASE_URL: https://service-test:4433
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      SESSION_SECRET: test_session_secret_64chars_padding_abcdefghijklmno
+      FIELD_ENCRYPTION_KEY: test_encryption_key_64chars_padding_abcdefghijklmno
+      BACKUP_ENCRYPTION_KEY: test_backup_encryption_key_64chars_padding_abcdefgh
+      INTERNAL_API_KEY: test_internal_api_key_min32chars_abcdefghijklmno
+    volumes:
+      - test-results:/app/test-results
+
+volumes:
+  test-results:
