@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
-# run_tests.sh — Run the full NexusOrder Desk test suite inside Docker.
+# run_tests.sh - Run NexusOrder Desk tests inside Docker.
 # Usage: ./run_tests.sh [--no-build]
 set -euo pipefail
 
 COMPOSE_FILE="docker-compose.test.yml"
+EXIT_CODE=0
+
+cleanup() {
+  echo ">>> Tearing down test containers..."
+  docker compose -f "$COMPOSE_FILE" down -v --remove-orphans || true
+}
+
+trap cleanup EXIT
 
 echo "================================================================"
-echo " NexusOrder Desk — Docker Test Suite"
+echo " NexusOrder Desk - Docker Test Suite"
 echo "================================================================"
 
 if [[ "${1:-}" != "--no-build" ]]; then
@@ -15,14 +23,12 @@ if [[ "${1:-}" != "--no-build" ]]; then
 fi
 
 echo ">>> Starting test environment..."
+set +e
 docker compose -f "$COMPOSE_FILE" up \
   --abort-on-container-exit \
   --exit-code-from test-runner
-
 EXIT_CODE=$?
-
-echo ">>> Tearing down test containers..."
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+set -e
 
 if [[ $EXIT_CODE -eq 0 ]]; then
   echo ""
