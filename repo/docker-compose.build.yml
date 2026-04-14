@@ -1,5 +1,3 @@
-version: "3.9"
-
 # CI build: compile all packages, verify no TypeScript errors
 services:
   build:

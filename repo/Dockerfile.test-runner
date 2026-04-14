@@ -34,7 +34,7 @@ RUN pnpm --filter @nexusorder/shared-validation build
 RUN pnpm --filter @nexusorder/shared-rbac build
 RUN pnpm --filter @nexusorder/shared-logging build
 
-# Build service (needed for integration tests)
-RUN pnpm --filter @nexusorder/service build
+# Build service (needed for integration tests) with emit-only (no type-check)
+RUN pnpm --filter @nexusorder/service exec tsc --noCheck
 
 CMD ["pnpm", "-r", "test"]

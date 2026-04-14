@@ -1,4 +1,4 @@
-import pino from 'pino';
+import { pino } from 'pino';
 
 // Sensitive fields that must never appear in logs
 const REDACTED_FIELDS = [
@@ -14,16 +14,18 @@ const REDACTED_FIELDS = [
 
 const isDev = process.env['NODE_ENV'] === 'development';
 
-export const logger = pino({
+const loggerOptions = {
   level: process.env['LOG_LEVEL'] ?? (isDev ? 'debug' : 'info'),
   redact: {
     paths: REDACTED_FIELDS,
     censor: '[REDACTED]',
   },
-  transport: isDev
-    ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard' } }
-    : undefined,
-});
+  ...(isDev
+    ? { transport: { target: 'pino-pretty', options: { colorize: true, translateTime: 'SYS:standard' } } }
+    : {}),
+};
+
+export const logger = pino(loggerOptions);
 
 export function createModuleLogger(module: string) {
   return logger.child({ module });
