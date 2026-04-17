@@ -248,7 +248,7 @@ describe('Object-level scope isolation: POST /api/orders/:id/tags', () => {
     expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
-  it('advisor in SAME scope CAN tag an order and response contains the tag', async () => {
+  it('advisor in SAME scope cannot tag an order without order_tags:create', async () => {
     const { orderId, advisorCookie } = await placeOrderForStudent(
       'tag_student_success', 'tag_advisor_success', 'SCHOOL_TS', 'ts',
     );
@@ -257,9 +257,8 @@ describe('Object-level scope isolation: POST /api/orders/:id/tags', () => {
       .post(`/api/orders/${orderId}/tags`)
       .set('Cookie', advisorCookie)
       .send({ tag: 'priority-review' });
-    expect(res.status).toBe(201);
-    expect(res.body.data.tag).toBe('priority-review');
-    expect(res.body.data.orderId).toBe(orderId);
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('admin can tag any order regardless of scope', async () => {

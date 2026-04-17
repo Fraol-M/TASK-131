@@ -35,8 +35,8 @@ describe('runStartupHealthCheck', () => {
 
   it('returns ok when all checkpoints are completed (not pending)', async () => {
     await getDb().collection('checkpoint_logs').insertMany([
-      { _id: 'chk-done-1', status: 'completed', createdAt: new Date() },
-      { _id: 'chk-done-2', status: 'failed', createdAt: new Date() },
+      { _id: 'chk-done-1', operationId: 'chk-done-op-1', status: 'completed', createdAt: new Date() },
+      { _id: 'chk-done-2', operationId: 'chk-done-op-2', status: 'failed', createdAt: new Date() },
     ]);
 
     const result = await runStartupHealthCheck();

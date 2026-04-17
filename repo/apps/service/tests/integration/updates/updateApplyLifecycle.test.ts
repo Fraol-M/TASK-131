@@ -21,7 +21,7 @@ async function login(username: string, password = 'TestPass1!@#') {
 
 describe('Update import + apply lifecycle', () => {
   it('admin can import an update package and it is staged', async () => {
-    await usersService.createUser({
+    const admin = await usersService.createUser({
       username: 'upd_apply_admin1', password: 'TestPass1!@#', role: 'department_admin', scope: {},
     });
     const cookie = await login('upd_apply_admin1');
@@ -43,7 +43,7 @@ describe('Update import + apply lifecycle', () => {
     const pkg = await getDb().collection('update_packages').findOne({ _id: res.body.data._id } as { _id: string });
     expect(pkg).not.toBeNull();
     expect(pkg!.status).toBe('staged');
-    expect(pkg!.importedBy).toBe('upd_apply_admin1');
+    expect(pkg!.importedBy).toBe(admin._id);
   });
 
   it('apply rejects a non-existent package ID', async () => {
@@ -87,7 +87,7 @@ describe('Update import + apply lifecycle', () => {
   });
 
   it('successful apply marks package as applied and returns applied status', async () => {
-    await usersService.createUser({
+    const admin = await usersService.createUser({
       username: 'upd_apply_admin5', password: 'TestPass1!@#', role: 'department_admin', scope: {},
     });
     const cookie = await login('upd_apply_admin5');
@@ -121,7 +121,7 @@ describe('Update import + apply lifecycle', () => {
     // DB should reflect applied state
     const pkg = await getDb().collection('update_packages').findOne({ _id: packageId } as { _id: string });
     expect(pkg?.status).toBe('applied');
-    expect(pkg?.appliedBy).toBe('upd_apply_admin5');
+    expect(pkg?.appliedBy).toBe(admin._id);
   });
 
   it('import records an audit event', async () => {

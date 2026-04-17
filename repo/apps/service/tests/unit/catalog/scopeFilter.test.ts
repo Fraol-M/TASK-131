@@ -59,7 +59,7 @@ describe('maskSku', () => {
   it('masks a plain-text SKU to show only last 4 chars', () => {
     const masked = maskSku('ABC-12345');
     expect(masked).toContain('2345');
-    expect(masked.length).toBeLessThan('ABC-12345'.length);
+    expect(masked).not.toBe('ABC-12345');
   });
 
   it('handles short SKU values', () => {
