@@ -4,9 +4,11 @@
  * for the update routes and their internal-key + role guard enforcement.
  */
 import { describe, it, expect } from 'vitest';
+import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { createApp } from '../../../src/app.js';
 import { usersService } from '../../../src/modules/users/usersService.js';
+import { getDb } from '../../../src/persistence/mongoClient.js';
 
 const app = createApp();
 
@@ -161,7 +163,39 @@ describe('Auto-rollback route authorization', () => {
       .post('/api/updates/auto-rollback')
       .set('x-internal-key', VALID_KEY)
       .send({ reason: 'startup_health_check_failure' });
-    // Either found something to roll back (200) or no applied package found (200 with message)
     expect(res.status).toBe(200);
+    expect(res.body.data).toBeDefined();
+    expect(res.body.data.message).toMatch(/no applied package/i);
+  });
+
+  it('rolls back and returns a rollback event when an applied package exists', async () => {
+    const pkgId = randomUUID();
+    await getDb().collection('update_packages').insertOne({
+      _id: pkgId,
+      filename: 'auto-rb-test.zip',
+      version: '9.9.9',
+      checksum: 'abc',
+      importedBy: 'test',
+      importedAt: new Date(),
+      appliedBy: 'test',
+      appliedAt: new Date(),
+      status: 'applied',
+    });
+
+    const res = await request(app)
+      .post('/api/updates/auto-rollback')
+      .set('x-internal-key', VALID_KEY)
+      .send({ reason: 'startup_health_check_failure' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeDefined();
+    // Should return a rollback event, not the no-op message
+    expect(res.body.data.message).toBeUndefined();
+    expect(res.body.data.status).toBe('completed');
+    expect(res.body.data.trigger).toBe('health_check_failure');
+
+    // Package should be marked rolled_back
+    const updated = await getDb().collection('update_packages').findOne({ _id: pkgId } as { _id: string });
+    expect(updated?.status).toBe('rolled_back');
   });
 });

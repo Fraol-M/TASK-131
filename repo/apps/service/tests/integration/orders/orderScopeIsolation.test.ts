@@ -244,6 +244,40 @@ describe('Object-level scope isolation: POST /api/orders/:id/tags', () => {
       .set('Cookie', otherCookie)
       .send({ tag: 'stolen-tag' });
     expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('FORBIDDEN');
+  });
+
+  it('advisor in SAME scope CAN tag an order and response contains the tag', async () => {
+    const { orderId, advisorCookie } = await placeOrderForStudent(
+      'tag_student_success', 'tag_advisor_success', 'SCHOOL_TS', 'ts',
+    );
+
+    const res = await request(app)
+      .post(`/api/orders/${orderId}/tags`)
+      .set('Cookie', advisorCookie)
+      .send({ tag: 'priority-review' });
+    expect(res.status).toBe(201);
+    expect(res.body.data.tag).toBe('priority-review');
+    expect(res.body.data.orderId).toBe(orderId);
+  });
+
+  it('admin can tag any order regardless of scope', async () => {
+    const { orderId } = await placeOrderForStudent(
+      'tag_student_admin', 'tag_advisor_admin', 'SCHOOL_TA', 'ta_tag',
+    );
+
+    await usersService.createUser({
+      username: 'tag_admin_user', password: 'TestPass1!@#', role: 'department_admin', scope: {},
+    });
+    const adminCookie = await login('tag_admin_user');
+
+    const res = await request(app)
+      .post(`/api/orders/${orderId}/tags`)
+      .set('Cookie', adminCookie)
+      .send({ tag: 'admin-flag' });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toBeDefined();
   });
 });
 

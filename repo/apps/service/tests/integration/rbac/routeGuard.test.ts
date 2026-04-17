@@ -15,30 +15,39 @@ describe('RBAC route guards', () => {
   it('returns 401 for unauthenticated request to /api/orders', async () => {
     const res = await request(app).get('/api/orders');
     expect(res.status).toBe(401);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 
   it('returns 403 when student tries to access /api/users', async () => {
     const cookie = await loginAs('student_rbac', 'student');
     const res = await request(app).get('/api/users').set('Cookie', cookie);
     expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('returns 403 when student tries to access /api/audits', async () => {
     const cookie = await loginAs('student_audit', 'student');
     const res = await request(app).get('/api/audits').set('Cookie', cookie);
     expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('allows admin to access /api/users', async () => {
     const cookie = await loginAs('admin_rbac', 'department_admin');
     const res = await request(app).get('/api/users').set('Cookie', cookie);
     expect(res.status).toBe(200);
+    expect(res.body.data).toBeDefined();
   });
 
   it('returns 403 when non-admin tries to create backup', async () => {
     const cookie = await loginAs('fa_rbac', 'faculty_advisor');
     const res = await request(app).post('/api/backups').set('Cookie', cookie).send({});
     expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('returns 403 when student tries to repair payment exception', async () => {
@@ -47,6 +56,8 @@ describe('RBAC route guards', () => {
       .set('Cookie', cookie)
       .send({ paymentIntentId: 'test', note: 'note' });
     expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 
   it('returns 403 when student tries to apply an update', async () => {
@@ -54,6 +65,8 @@ describe('RBAC route guards', () => {
     // Update routes are protected by internal key, not session — 401 for missing key
     const res = await request(app).post('/api/updates/fake-id/apply').set('Cookie', cookie);
     expect(res.status).toBe(401);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('UNAUTHORIZED');
   });
 
   it('GET /api/rules/conflicts is NOT captured by the /:id dynamic route', async () => {
@@ -61,6 +74,7 @@ describe('RBAC route guards', () => {
     const res = await request(app).get('/api/rules/conflicts').set('Cookie', cookie);
     // Should return 200 with data array, not 404/422 from /:id trying to look up "conflicts"
     expect(res.status).toBe(200);
+    expect(res.body.data).toBeDefined();
     expect(Array.isArray(res.body.data)).toBe(true);
   });
 
@@ -71,5 +85,7 @@ describe('RBAC route guards', () => {
       .set('Cookie', cookie)
       .send({ paymentReference: 'REF' });
     expect(res.status).toBe(403);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe('FORBIDDEN');
   });
 });
